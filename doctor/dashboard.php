@@ -17,7 +17,7 @@ $stmt = $pdo->prepare("
     SELECT a.*, p.full_name as patient_name, p.phone as patient_phone
     FROM appointments a
     JOIN users p ON a.patient_id = p.user_id
-    WHERE a.doctor_id = ? AND a.appointment_date = ? AND a.status IN ('checked_in', 'waiting', 'in_consultation')
+    WHERE a.doctor_id = ? AND a.appointment_date = ? AND a.status IN ('Checked-In', 'Waiting', 'In Consultation', 'Arrived')
     ORDER BY a.queue_number ASC
 ");
 $stmt->execute([$doctor_id, $today]);
@@ -28,7 +28,7 @@ $upcoming_stmt = $pdo->prepare("
     SELECT a.*, p.full_name as patient_name, p.phone as patient_phone
     FROM appointments a
     JOIN users p ON a.patient_id = p.user_id
-    WHERE a.doctor_id = ? AND a.appointment_date >= ? AND a.status IN ('booked', 'confirmed')
+    WHERE a.doctor_id = ? AND a.appointment_date >= ? AND a.status IN ('Booked', 'Confirmed')
     ORDER BY a.appointment_date ASC, a.appointment_time ASC
 ");
 $upcoming_stmt->execute([$doctor_id, $today]);
@@ -44,7 +44,7 @@ $upcoming_patients = $upcoming_stmt->fetchAll();
 <body>
     <div style="background: white; padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
         <div class="logo">🏥 Doctor Portal - Dr. <?php echo htmlspecialchars($_SESSION['full_name']); ?></div>
-     <div class="nav-links">
+        <div class="nav-links">
             <a href="dashboard.php" style="color: var(--primary);">My Queue</a>
             <a href="../staff/hub.php">Staff Hub</a>
             <a href="profile.php">Profile</a>
@@ -73,7 +73,11 @@ $upcoming_patients = $upcoming_stmt->fetchAll();
                             <td><?php echo htmlspecialchars($qp['patient_name']); ?></td>
                             <td><?php echo htmlspecialchars($qp['patient_phone']); ?></td>
                             <td><?php echo htmlspecialchars($qp['reason']); ?></td>
-                            <td><span class="badge badge-<?php echo $qp['status']; ?>"><?php echo $qp['status']; ?></span></td>
+                            <td>
+                                <!-- FIX: Normalize CSS class name to lowercase with dashes -->
+                                <?php $badgeClass = strtolower(str_replace([' ', '_'], '-', $qp['status'])); ?>
+                                <span class="badge badge-<?php echo $badgeClass; ?>"><?php echo $qp['status']; ?></span>
+                            </td>
                             <td>
                                 <a href="consultation.php?apt_id=<?php echo $qp['appointment_id']; ?>" class="btn" style="padding: 6px 12px; font-size: 0.85rem; width: auto;">Start Consultation</a>
                             </td>
@@ -106,7 +110,10 @@ $upcoming_patients = $upcoming_stmt->fetchAll();
                             <td><?php echo htmlspecialchars($up['patient_name']); ?></td>
                             <td><?php echo htmlspecialchars($up['patient_phone']); ?></td>
                             <td><?php echo htmlspecialchars($up['reason']); ?></td>
-                            <td><span class="badge badge-<?php echo $up['status']; ?>"><?php echo $up['status']; ?></span></td>
+                            <td>
+                                <?php $upBadgeClass = strtolower(str_replace([' ', '_'], '-', $up['status'])); ?>
+                                <span class="badge badge-<?php echo $upBadgeClass; ?>"><?php echo $up['status']; ?></span>
+                            </td>
                         </tr>
                     <?php endforeach; else: ?>
                         <tr><td colspan="6" class="text-center">No upcoming booked appointments.</td></tr>

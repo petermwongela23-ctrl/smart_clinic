@@ -64,7 +64,7 @@ function getQueueMetrics($pdo, $doctor_id, $appointment_id, $appointment_time, $
             <a href="dashboard.php" style="color: var(--primary);">My Appointments</a>
             <a href="book_appointment.php">Book Appointment</a>
             <a href="records.php">Medical Records</a>
-            <a href="profile.php">Profile</a>
+            <!-- <a href="profile.php">Profile</a> -->
             <a href="../logout.php" style="color: var(--danger);">Logout</a>
         </div>
     </div>
