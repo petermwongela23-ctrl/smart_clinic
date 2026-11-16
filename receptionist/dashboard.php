@@ -8,18 +8,17 @@ $success = '';
 $error = '';
 $today = date('Y-m-d');
 
-
 function checkInAppointment($pdo, $apt_id, $today) {
     $q_stmt = $pdo->prepare("SELECT MAX(queue_number) FROM appointments WHERE appointment_date = ?");
     $q_stmt->execute([$today]);
     $max_q = $q_stmt->fetchColumn();
     $next_q = $max_q ? $max_q + 1 : 1;
 
-    $stmt = $pdo->prepare("UPDATE appointments SET status = 'checked_in', queue_number = ? WHERE appointment_id = ?");
+    // FIX: Use exact ENUM value 'Checked-In'
+    $stmt = $pdo->prepare("UPDATE appointments SET status = 'Checked-In', queue_number = ? WHERE appointment_id = ?");
     $stmt->execute([$next_q, $apt_id]);
     return $next_q;
 }
-
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qr_checkin'])) {
     $qr_token = trim($_POST['qr_token']);
@@ -29,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qr_checkin'])) {
 
     if (!$apt) {
         $error = "Invalid QR Token. No matching appointment found.";
-    } elseif ($apt['status'] === 'checked_in' || $apt['status'] === 'completed') {
+    } elseif (in_array($apt['status'], ['Checked-In', 'Waiting', 'In Consultation', 'Completed'])) {
         $error = "This appointment is already marked as '{$apt['status']}'.";
     } else {
         $next_q = checkInAppointment($pdo, $apt['appointment_id'], $today);
@@ -37,12 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qr_checkin'])) {
     }
 }
 
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $apt_id = $_POST['appointment_id'];
     $new_status = $_POST['status'];
 
-    if ($new_status === 'checked_in') {
+    if ($new_status === 'Checked-In') {
         $next_q = checkInAppointment($pdo, $apt_id, $today);
         $success = "Patient checked in successfully! Assigned Queue Number: #{$next_q}";
     } else {
@@ -74,7 +72,7 @@ $todays_appointments = $stmt->fetchAll();
 <body>
     <div style="background: white; padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
         <div class="logo">🏥 Receptionist Portal - Live Queue Manager</div>
-      <div class="nav-links">
+        <div class="nav-links">
             <a href="dashboard.php" style="color: var(--primary);">Live Queue</a>
             <a href="walk_in.php" class="btn" style="padding: 6px 15px; color: white;">Register Walk-In</a>
             <a href="../staff/hub.php">Staff Hub</a>
@@ -87,7 +85,6 @@ $todays_appointments = $stmt->fetchAll();
         <?php if (!empty($error)): ?><div class="alert alert-error"><?php echo $error; ?></div><?php endif; ?>
         <?php if (!empty($success)): ?><div class="alert alert-success"><?php echo $success; ?></div><?php endif; ?>
 
-        
         <div class="card" style="margin-bottom: 25px; padding: 20px;">
             <h3 style="margin-bottom: 10px; color: var(--primary);">⚡ Express QR Token Check-In</h3>
             <form action="dashboard.php" method="POST" style="display: flex; gap: 10px;">
@@ -121,15 +118,19 @@ $todays_appointments = $stmt->fetchAll();
                             <td>Dr. <?php echo htmlspecialchars($apt['doctor_name']); ?></td>
                             <td><?php echo $apt['appointment_time']; ?></td>
                             <td><code><?php echo $apt['qr_token']; ?></code></td>
-                            <td><span class="badge badge-<?php echo $apt['status']; ?>"><?php echo $apt['status']; ?></span></td>
+                            <td>
+                                <?php $badgeClass = strtolower(str_replace([' ', '_'], '-', $apt['status'])); ?>
+                                <span class="badge badge-<?php echo $badgeClass; ?>"><?php echo $apt['status']; ?></span>
+                            </td>
                             <td>
                                 <form action="dashboard.php" method="POST" style="display: flex; gap: 5px;">
                                     <input type="hidden" name="update_status" value="1">
                                     <input type="hidden" name="appointment_id" value="<?php echo $apt['appointment_id']; ?>">
-                                    <?php if ($apt['status'] === 'booked' || $apt['status'] === 'confirmed'): ?>
-                                        <button type="submit" name="status" value="checked_in" class="btn" style="padding: 4px 10px; font-size: 0.8rem;">Check In</button>
-                                    <?php elseif ($apt['status'] === 'checked_in'): ?>
-                                        <button type="submit" name="status" value="waiting" class="btn" style="padding: 4px 10px; font-size: 0.8rem; background: #ca8a04;">Send to Waiting</button>
+                                    
+                                    <?php if ($apt['status'] === 'Booked' || $apt['status'] === 'Confirmed'): ?>
+                                        <button type="submit" name="status" value="Checked-In" class="btn" style="padding: 4px 10px; font-size: 0.8rem;">Check In</button>
+                                    <?php elseif ($apt['status'] === 'Checked-In'): ?>
+                                        <button type="submit" name="status" value="Waiting" class="btn" style="padding: 4px 10px; font-size: 0.8rem; background: #ca8a04;">Send to Waiting</button>
                                     <?php endif; ?>
                                 </form>
                             </td>

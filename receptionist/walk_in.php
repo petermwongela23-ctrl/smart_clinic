@@ -32,8 +32,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $next_q = $max_q ? $max_q + 1 : 1;
 
             $qr_token = 'QR-WALK-' . strtoupper(bin2hex(random_bytes(5)));
-            $stmt = $pdo->prepare("INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, booking_type, status, qr_token, queue_number, reason) VALUES (?, ?, ?, ?, 'walk_in', 'checked_in', ?, ?, ?)");
+            
+            // FIX: Changed 'checked_in' to 'Checked-In' to match the database ENUM
+            $stmt = $pdo->prepare("INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, booking_type, status, qr_token, queue_number, reason) VALUES (?, ?, ?, ?, 'walk_in', 'Checked-In', ?, ?, ?)");
             $stmt->execute([$patient_id, $doctor_id, $today, $now, $qr_token, $next_q, $reason]);
+            
             $pdo->commit();
             $success = "Walk-in patient registered successfully! Assigned Queue Number: #{$next_q}";
         } catch (Exception $e) {
@@ -81,7 +84,7 @@ $doctors = $pdo->query("
                         <option value="">-- Choose Doctor --</option>
                         <?php foreach ($doctors as $doc): ?>
                             <option value="<?php echo $doc['doctor_id']; ?>">
-                                Dr. <?php echo htmlspecialchars($doc['full_name']); ?> - <?php echo htmlspecialchars($doc['specialty']); ?>
+                                Dr. <?php echo htmlspecialchars($doc['full_name']); ?> (<?php echo htmlspecialchars($doc['specialty']); ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
